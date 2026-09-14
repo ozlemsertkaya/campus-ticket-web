@@ -21,7 +21,7 @@ function App() {
   const [tickets, setTickets] = useState([]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [priority, setPriority] = useState('orta');
+  const [priority, setPriority] = useState(2);
   const [formSuccess, setFormSuccess] = useState('');
 
   // --- API ÇAĞRILARI VE İŞLEMLER ---
@@ -30,6 +30,7 @@ function App() {
   const fetchTickets = async () => {
     try {
       const response = await api.get('/tickets');
+      console.log("GELEN BİLETLER:", response.data);
       setTickets(response.data.data || response.data);
     } catch (err) {
       console.error('Talepler yüklenirken hata oluştu:', err);
@@ -92,7 +93,7 @@ function App() {
       await api.post('/tickets', {
         title,
         description,
-        priority,
+        priority_id: priority,
       });
 
       setFormSuccess('Arıza talebi başarıyla oluşturuldu!');
@@ -115,6 +116,18 @@ function App() {
       fetchTickets();
     } catch (err) {
       console.error('Talep atanırken hata oluştu:', err);
+    }
+  };
+  const handleSendMessage = async (ticketId, messageText) => {
+    try {
+      await api.post(`/tickets/${ticketId}/messages`, {
+        message: messageText,
+      });
+      //Mesaj gittikten sonra bilet detayını veya bilgileri güncelle
+      fetchTickets();
+    } catch (err) {
+      console.error('Mesaj gönderilirken hata oluştu:', err);
+      alert(err.response?.data?.message || 'Mesaj gönderilemedi!');
     }
   };
 
@@ -292,10 +305,10 @@ function App() {
                 onChange={(e) => setPriority(e.target.value)}
                 style={{ padding: '6px' }}
               >
-                <option value="düşük">Düşük</option>
-                <option value="orta">Orta</option>
-                <option value="yüksek">Yüksek</option>
-                <option value="acil">Acil</option>
+                <option value={1}>Düşük</option>
+                <option value={2}>Orta</option>
+                <option value={3}>Yüksek</option>
+                <option value={4}>Acil</option>
               </select>
               <button
                 type="submit"
