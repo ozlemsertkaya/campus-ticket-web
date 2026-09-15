@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import TicketChatModal from './TicketChatModal';
 import api from './api';
 
 function App() {
@@ -23,8 +24,16 @@ function App() {
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState(2);
   const [formSuccess, setFormSuccess] = useState('');
+  const [activeTicketForChat, setActiveTicketForChat] = useState(null);
 
   // --- API ÇAĞRILARI VE İŞLEMLER ---
+
+  const statusTranslations = {
+    pending: 'Açık (Bekliyor)',
+    in_progress: 'İşlemde',
+    resolved: 'Çözüldü',
+    closed: 'Kapatıldı',
+  };
 
   // Biletleri getiren fonksiyon
   const fetchTickets = async () => {
@@ -336,59 +345,74 @@ function App() {
                 padding: '16px',
                 borderRadius: '8px',
                 backgroundColor: '#ffffff',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                marginBottom: '16px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px'
               }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                <strong style={{ fontSize: '16px' }}>{ticket.title}</strong>
+              {/* Bilet Başlığı ve Statü Rozeti */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h4 style={{ margin: 0, color: '#1e293b' }}>{ticket.title}</h4>
                 <span style={{
-                  padding: '2px 8px',
+                  padding: '4px 8px',
                   borderRadius: '4px',
-                  fontSize: '12px',
+                  fontSize: '0.8rem',
                   fontWeight: 'bold',
-                  backgroundColor: ticket.status === 'open' ? '#fef3c7' : ticket.status === 'in_progress' ? '#dbeafe' : '#dcfce7',
-                  color: ticket.status === 'open' ? '#d97706' : ticket.status === 'in_progress' ? '#2563eb' : '#15803d'
+                  backgroundColor: ticket.status === 'in_progress' ? '#dbeafe' : '#f1f5f9',
+                  color: ticket.status === 'in_progress' ? '#1e40af' : '#475569'
                 }}>
-                  {ticket.status === 'open' && 'Açık (Bekliyor)'}
-                  {ticket.status === 'in_progress' && 'İşlemde'}
-                  {ticket.status === 'resolved' && 'Çözüldü'}
-                  {ticket.status === 'closed' && 'Kapatıldı'}
-                  {!['open', 'in_progress', 'resolved', 'closed'].includes(ticket.status) && ticket.status}
+                  {statusTranslations[ticket.status] || ticket.status}
                 </span>
               </div>
 
-              <p style={{ margin: '6px 0', fontSize: '14px', color: '#334155' }}>{ticket.description}</p>
-              <small style={{ color: '#64748b' }}>Öncelik: <b>{ticket.priority}</b></small>
+              {/* Açıklama */}
+              <p style={{ margin: '8px 0', color: '#64748b', fontSize: '0.9rem' }}>
+                {ticket.description}
+              </p>
 
-              {/* SADECE PERSONEL GÖRÜR: TALEBİ YÖNETME BUTONLARI */}
-              {user.role === 'agent' && (
-                <div style={{ display: 'flex', gap: '8px', marginTop: '12px', borderTop: '1px solid #f1f5f9', paddingTop: '10px' }}>
-                  {ticket.status === 'open' && (
-                    <button
-                      onClick={() => handleAssignTicket(ticket.id)}
-                      style={{ backgroundColor: '#2563eb', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer' }}
-                    >
-                      Talebi Üzerime Al
-                    </button>
-                  )}
+              {/* Öncelik */}
+              <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
+                Öncelik: <strong>{ticket.priority}</strong>
+              </div>
 
-                  {ticket.status === 'in_progress' && (
-                    <button
-                      onClick={() => handleResolveTicket(ticket.id)}
-                      style={{ backgroundColor: '#16a34a', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer' }}
-                    >
-                      Çözüldü Olarak İşaretle
-                    </button>
-                  )}
+              {/* MESAJLAR BUTONU */}
+              {ticket.status === 'in_progress' && (
+                <div style={{ marginTop: '10px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTicketForChat(ticket)}
+                    style={{
+                      backgroundColor: '#2563eb',
+                      color: '#ffffff',
+                      border: 'none',
+                      padding: '8px 16px',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontSize: '0.85rem',
+                      fontWeight: '600'
+                    }}
+                  >
+                    Mesajlar
+                  </button>
                 </div>
               )}
             </div>
           ))}
         </div>
       )}
+      {activeTicketForChat && (
+        <TicketChatModal
+          ticket={activeTicketForChat}
+          currentUser={user}
+          onClose={() => setActiveTicketForChat(null)}
+        />
+      )}
 
     </div>
   );
+
 }
 
 export default App;
