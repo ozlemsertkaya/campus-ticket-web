@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import TicketChatModal from './TicketChatModal';
 import api from './api';
 
+
 function App() {
   // 1. OTURUM VE TOKEN DURUMLARI
   const [token, setToken] = useState(localStorage.getItem('token') || '');
@@ -140,6 +141,27 @@ function App() {
     }
   };
 
+  const handleStatusChange = async (ticketId, newStatus) => {
+    try {
+      //Backend endpointine PATCH/PUT isteği
+      const res = await api.patch(`/tickets/${ticketId}/status`, {
+        status: newStatus
+      });
+      //Ekrandaki state i anında güncelle
+      setTickets((prev) =>
+        prev.map((t) => (t.id === ticketId ? { ...t, status: newStatus } : t))
+      );
+      //Eğer o an açık bir modal varsa onun bilet durumunu da güncelle
+      if (activeTicketForChat && activeTicketForChat.id === ticketId) {
+        setActiveTicketForChat((prev) => ({ ...prev, status: newStatus }));
+      }
+
+    } catch (err) {
+      console.error("Backend hatası:", err.response?.data || err.message);
+      alert(`Durum güncellenemedi: ${err.response?.data?.message || err.message}`);
+    }
+  };
+
   // Personel: Talebi Çözüldü Yapma
   const handleResolveTicket = async (ticketId) => {
     try {
@@ -262,22 +284,90 @@ function App() {
   // 2. EKRAN: GİRİŞ YAPILMIŞSA (ANA PANEL & TALEP YÖNETİMİ)
   // ========================================================
   return (
-    <div style={{ maxWidth: '800px', margin: '30px auto', fontFamily: 'Arial, sans-serif', padding: '20px' }}>
 
-      {/* ÜST PANEL: PROFİL BİLGİSİ VE ÇIKIŞ */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '14px', marginBottom: '20px' }}>
-        <div>
-          <h3 style={{ margin: 0 }}>Hoş geldin, {user.name}</h3>
-          <span style={{ fontSize: '13px', color: user.role === 'agent' ? '#2563eb' : '#059669', fontWeight: 'bold' }}>
-            Rol: {user.role === 'agent' ? 'Destek Personeli' : 'Öğrenci'} ({user.email})
-          </span>
+    <div style={{ backgroundColor: '#f8fafc', minHeight: '100vh', color: '#1e293b', fontFamily: 'sans-serif' }}>
+
+      {/* ÜST PANEL: İSTÜN KURUMSAL HEADER */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          backgroundColor: '#ffffff',
+          borderBottom: '2px solid #b91c1c',
+          borderRadius: '8px',
+          padding: '12px 20px',
+          marginBottom: '24px',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.06)'
+        }}
+      >
+        {/* Sol Taraf: Logo ve Üniversite Başlığı */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <img
+            src="/logo.jpeg"
+            alt="İSTÜN Logo"
+            style={{ height: '45px', width: 'auto', objectFit: 'contain' }}
+            onError={(e) => {
+              // Eğer uzantı .jpg ise otomatik bunu dener:
+              e.target.onerror = null;
+              e.target.src = '/logo.jpg';
+            }}
+
+          />
+          <div>
+            <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#8b0000', fontWeight: '700' }}>
+              İSTÜN Kampüs Destek Sistemi
+            </h3>
+            <span style={{ fontSize: '12px', color: '#64748b' }}>
+              İstanbul Sağlık ve Teknoloji Üniversitesi
+            </span>
+          </div>
         </div>
-        <button
-          onClick={handleLogout}
-          style={{ padding: '8px 14px', background: '#dc2626', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-        >
-          Çıkış Yap
-        </button>
+
+        {/* Sağ Taraf: Kullanıcı Bilgisi ve Çıkış Butonu */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '18px' }}>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontWeight: '700', fontSize: '0.95rem', color: '#1e293b', letterSpacing: '0.3px' }}>
+              {user?.name}
+            </div>
+            <span
+              style={{
+                display: 'inline-block',
+                marginTop: '2px',
+                padding: '2px 8px',
+                borderRadius: '12px',
+                fontSize: '0.75rem',
+                fontWeight: '600',
+                backgroundColor: user?.role === 'agent' ? '#fef2f2' : '#f0fdf4',
+                color: user?.role === 'agent' ? '#b91c1c' : '#15803d',
+                border: user?.role === 'agent' ? '1px solid #fecaca' : '1px solid #bbf7d0'
+
+              }}
+            >
+              {user?.role === 'agent' ? 'Destek Personeli' : 'Öğrenci'}
+            </span>
+          </div>
+
+          <button
+            onClick={handleLogout}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: '#b91c1c',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontWeight: '600',
+              fontSize: '0.85rem',
+              boxShadow: '0 2px 4px rgba(185, 28, 28, 0.2)',
+              transition: 'background-color 0.2s'
+            }}
+            onMouseOver={(e) => (e.target.style.backgroundColor = '#991b1b')}
+            onMouseOut={(e) => (e.target.style.backgroundColor = '#b91c1c')}
+          >
+            Çıkış Yap
+          </button>
+        </div>
       </div>
 
       {/* SADECE ÖĞRENCİ GÖRÜR: TALEP AÇMA KARTI */}
@@ -347,25 +437,12 @@ function App() {
                 backgroundColor: '#ffffff',
                 boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
                 marginBottom: '16px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '8px'
               }}
             >
-              {/* Bilet Başlığı ve Statü Rozeti */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h4 style={{ margin: 0, color: '#1e293b' }}>{ticket.title}</h4>
-                <span style={{
-                  padding: '4px 8px',
-                  borderRadius: '4px',
-                  fontSize: '0.8rem',
-                  fontWeight: 'bold',
-                  backgroundColor: ticket.status === 'in_progress' ? '#dbeafe' : '#f1f5f9',
-                  color: ticket.status === 'in_progress' ? '#1e40af' : '#475569'
-                }}>
-                  {statusTranslations[ticket.status] || ticket.status}
-                </span>
-              </div>
+              {/* Sağ üstteki rozeti tamamen sildik, sadece temiz başlık kaldı */}
+              <h3 style={{ margin: '0 0 8px 0', color: '#1e293b' }}>
+                {ticket.title}
+              </h3>
 
               {/* Açıklama */}
               <p style={{ margin: '8px 0', color: '#64748b', fontSize: '0.9rem' }}>
@@ -377,9 +454,10 @@ function App() {
                 Öncelik: <strong>{ticket.priority}</strong>
               </div>
 
-              {/* MESAJLAR BUTONU */}
-              {ticket.status === 'in_progress' && (
-                <div style={{ marginTop: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '10px' }}>
+
+                {/* 1. Sadece 'in_progress' ise Mesajlar butonu çıksın */}
+                {ticket.status === 'in_progress' && (
                   <button
                     type="button"
                     onClick={() => setActiveTicketForChat(ticket)}
@@ -387,17 +465,40 @@ function App() {
                       backgroundColor: '#2563eb',
                       color: '#ffffff',
                       border: 'none',
-                      padding: '8px 16px',
+                      padding: '6px 14px',
                       borderRadius: '6px',
                       cursor: 'pointer',
-                      fontSize: '0.85rem',
-                      fontWeight: '600'
+                      fontWeight: '600',
+                      fontSize: '0.85rem'
                     }}
                   >
                     Mesajlar
                   </button>
-                </div>
-              )}
+                )}
+
+                {/* 2. Statü Değiştirme Dropdown'ı (Personel için) */}
+                <select
+                  value={ticket.status}
+                  onChange={(e) => handleStatusChange(ticket.id, e.target.value)}
+                  style={{
+                    padding: '6px 10px',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    backgroundColor: '#f8fafc',
+                    color: '#1e293b',
+                    fontSize: '0.85rem',
+                    cursor: 'pointer',
+                    outline: 'none'
+                  }}
+                >
+                  <option value="open">Açık (Bekliyor)</option>
+                  <option value="in_progress">İşlemde</option>
+                  <option value="resolved">Çözüldü</option>
+                  <option value="closed">Kapatıldı (Spam / İptal)</option>
+                </select>
+
+              </div>
+
             </div>
           ))}
         </div>
