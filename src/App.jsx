@@ -33,12 +33,14 @@ function App() {
       setTickets(response.data.data || response.data);
     } catch (err) {
       console.error('Talepler yüklenirken hata oluştu:', err);
+      if (err.response?.status === 401) {
+        handleLogout();
+      }
     }
   };
 
   useEffect(() => {
     if (token) {
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       fetchTickets();
     }
   }, [token]);
@@ -52,11 +54,11 @@ function App() {
 
     try {
       const res = await api.post(endpoint, payload);
-      const { token: newToken, user: userData } = res.data;
+      const newToken = res.data.token;
+      const userData = res.data.user;
 
       localStorage.setItem('token', newToken);
       localStorage.setItem('user', JSON.stringify(userData));
-      api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
 
       setToken(newToken);
       setUser(userData);
@@ -74,7 +76,6 @@ function App() {
 
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    delete api.defaults.headers.common['Authorization'];
     setToken('');
     setUser(null);
     setTickets([]);
@@ -89,6 +90,7 @@ function App() {
         title,
         description,
         priority_id: priority,
+        category_id: 1, // Kategori hatasını garantiye almak için varsayılan 1 gönderiyoruz
       });
 
       setFormSuccess('Arıza talebi başarıyla oluşturuldu!');
@@ -99,6 +101,10 @@ function App() {
       setTimeout(() => setFormSuccess(''), 3000);
     } catch (err) {
       console.error('Talep oluşturulurken hata:', err);
+      if (err.response?.status === 401) {
+        alert('Oturum süreniz dolmuş, lütfen tekrar giriş yapın.');
+        handleLogout();
+      }
     }
   };
 
